@@ -27,7 +27,7 @@ export default function Chatbot({ onClose }: ChatbotProps) {
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const N8N_WEBHOOK_URL = 'https://nash-n8n.sliplane.app/webhook/chat'
+  const N8N_WEBHOOK_URL = 'https://n8n-buih.sliplane.app/webhook/chat'
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
