@@ -23,10 +23,12 @@ export default function Chatbot({ onClose }: ChatbotProps) {
   }])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [emailCaptured, setEmailCaptured] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Version corrigée - n8n-buih
-  const N8N_WEBHOOK_URL = 'https://n8n-buih.sliplane.app/webhook/chat'
+  // URLs des deux webhooks
+  const N8N_CHAT_URL = 'https://n8n-buih.sliplane.app/webhook/chat-response'
+  const N8N_LEAD_URL = 'https://n8n-buih.sliplane.app/webhook/lead-capture'
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -58,7 +60,8 @@ export default function Chatbot({ onClose }: ChatbotProps) {
         content: msg.text
       }))
 
-      const response = await fetch(N8N_WEBHOOK_URL, {
+      // Appel Workflow 1 : Génération de la réponse
+      const response = await fetch(N8N_CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,6 +85,28 @@ export default function Chatbot({ onClose }: ChatbotProps) {
       }
 
       setMessages([...newMessages, botMessage])
+
+      // Vérifier si le message contient un email
+      const containsEmail = inputValue.includes('@')
+      
+      // Si email détecté ET pas encore capturé, appeler Workflow 2
+      if (containsEmail && !emailCaptured) {
+        setEmailCaptured(true)
+        
+        // Appel Workflow 2 : Extraction et sauvegarde (en arrière-plan)
+        fetch(N8N_LEAD_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: [...conversationHistory, { role: 'assistant', content: data.response }]
+          }),
+        }).catch(error => {
+          console.error('Erreur capture lead:', error)
+        })
+      }
+
     } catch (error) {
       console.error('Erreur chatbot:', error)
       const errorMessage: Message = {
