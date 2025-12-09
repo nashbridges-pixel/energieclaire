@@ -1,4 +1,4 @@
-// Force rebuild v2
+// Force rebuild v3 - Cache bust
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
@@ -27,9 +27,9 @@ export default function Chatbot({ onClose }: ChatbotProps) {
   const [emailCaptured, setEmailCaptured] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // URLs des deux webhooks
-  const N8N_CHAT_URL = 'https://n8n-buih.sliplane.app/webhook/chat-response'
-  const N8N_LEAD_URL = 'https://n8n-buih.sliplane.app/webhook/lead-capture'
+  // URLs des deux webhooks - OPTIMIZED ARCHITECTURE
+  const WEBHOOK_CHAT = 'https://n8n-buih.sliplane.app/webhook/chat-response'
+  const WEBHOOK_LEAD = 'https://n8n-buih.sliplane.app/webhook/lead-capture'
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -61,8 +61,8 @@ export default function Chatbot({ onClose }: ChatbotProps) {
         content: msg.text
       }))
 
-      // Appel Workflow 1 : Génération de la réponse
-      const response = await fetch(N8N_CHAT_URL, {
+      // Appel Workflow 1 : Génération de la réponse du bot
+      const response = await fetch(WEBHOOK_CHAT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ export default function Chatbot({ onClose }: ChatbotProps) {
         setEmailCaptured(true)
         
         // Appel Workflow 2 : Extraction et sauvegarde (en arrière-plan)
-        fetch(N8N_LEAD_URL, {
+        fetch(WEBHOOK_LEAD, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
