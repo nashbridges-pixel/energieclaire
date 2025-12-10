@@ -1,4 +1,4 @@
-// Force rebuild v3 - Cache bust
+// Force rebuild v4 - Final optimization
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
@@ -24,7 +24,7 @@ export default function Chatbot({ onClose }: ChatbotProps) {
   }])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [emailCaptured, setEmailCaptured] = useState(false)
+  const [leadCaptured, setLeadCaptured] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // URLs des deux webhooks - OPTIMIZED ARCHITECTURE
@@ -87,12 +87,19 @@ export default function Chatbot({ onClose }: ChatbotProps) {
 
       setMessages([...newMessages, botMessage])
 
-      // Vérifier si le message contient un email
-      const containsEmail = inputValue.includes('@')
+      // Vérifier si le bot a terminé la qualification
+      const isQualificationComplete = data.response.includes('[QUALIFICATION_TERMINEE]')
       
-      // Si email détecté ET pas encore capturé, appeler Workflow 2
-      if (containsEmail && !emailCaptured) {
-        setEmailCaptured(true)
+      // Si qualification terminée ET pas encore capturé, appeler Workflow 2
+      if (isQualificationComplete && !leadCaptured) {
+        setLeadCaptured(true)
+        
+        // Nettoyer le marqueur du message affiché
+        const cleanBotMessage: Message = {
+          ...botMessage,
+          text: data.response.replace('[QUALIFICATION_TERMINEE]', '').trim()
+        }
+        setMessages([...newMessages, cleanBotMessage])
         
         // Appel Workflow 2 : Extraction et sauvegarde (en arrière-plan)
         fetch(WEBHOOK_LEAD, {
