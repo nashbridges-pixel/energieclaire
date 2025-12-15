@@ -1,4 +1,4 @@
-// Force rebuild v5 - Fixed [QUALIFICATION_TERMINEE] display
+// Force rebuild v4 - Fixed marker display
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
@@ -27,7 +27,7 @@ export default function Chatbot({ onClose }: ChatbotProps) {
   const [leadCaptured, setLeadCaptured] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // URLs des deux webhooks - ARCHITECTURE OPTIMISÉE
+  // URLs des deux webhooks - OPTIMIZED ARCHITECTURE
   const WEBHOOK_CHAT = 'https://n8n-buih.sliplane.app/webhook/chat-response'
   const WEBHOOK_LEAD = 'https://n8n-buih.sliplane.app/webhook/lead-capture'
 
@@ -55,73 +55,71 @@ export default function Chatbot({ onClose }: ChatbotProps) {
     setIsLoading(true)
 
     try {
-      // Construire l'historique pour DeepSeek
+      // Construire l'historique des messages pour DeepSeek
       const conversationHistory = newMessages.map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'assistant',
         content: msg.text
       }))
 
-      // APPEL WEBHOOK 1 : Chatbot Response (à chaque message)
-      const chatResponse = await fetch(WEBHOOK_CHAT, {
+      // Appel Workflow 1 : Génération de la réponse du bot
+      const response = await fetch(WEBHOOK_CHAT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           messages: conversationHistory
         }),
       })
 
-      if (!chatResponse.ok) {
+      if (!response.ok) {
         throw new Error('Erreur réseau')
       }
 
-      const chatData = await chatResponse.json()
-      let botMessageText = chatData.response || chatData.message || 'Désolé, une erreur est survenue.'
-
-      // CRITIQUE : Détecter ET nettoyer le marqueur AVANT affichage
-      const hasQualificationMarker = botMessageText.includes('[QUALIFICATION_TERMINEE]')
+      const data = await response.json()
       
-      if (hasQualificationMarker) {
-        // Nettoyer le marqueur pour l'affichage utilisateur
-        botMessageText = botMessageText.replace('[QUALIFICATION_TERMINEE]', '').trim()
-        
-        // Appeler webhook Lead Capture UNE SEULE FOIS
-        if (!leadCaptured) {
-          setLeadCaptured(true)
-          
-          // APPEL WEBHOOK 2 : Lead Capture (une seule fois)
-          fetch(WEBHOOK_LEAD, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: conversationHistory
-            }),
-          }).catch(error => {
-            console.error('Erreur Lead Capture:', error)
-          })
-        }
-      }
-
-      // Ajouter le message bot NETTOYÉ
+      // Vérifier si qualification terminée
+      const isQualificationComplete = data.response.includes('[QUALIFICATION_TERMINEE]')
+      
+      // NETTOYER le marqueur AVANT de créer le message
+      const cleanedResponse = data.response.replace('[QUALIFICATION_TERMINEE]', '').trim()
+      
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: botMessageText,
+        text: cleanedResponse,  // ← Message nettoyé
         sender: 'bot',
         timestamp: new Date(),
       }
 
-      setMessages(prev => [...prev, botMessage])
+      setMessages([...newMessages, botMessage])
+
+      // Si qualification terminée ET pas encore capturé, appeler Workflow 2
+      if (isQualificationComplete && !leadCaptured) {
+        setLeadCaptured(true)
+        
+        // Appel Workflow 2 : Extraction et sauvegarde (en arrière-plan)
+        fetch(WEBHOOK_LEAD, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: [...conversationHistory, { role: 'assistant', content: data.response }]
+          }),
+        }).catch(error => {
+          console.error('Erreur capture lead:', error)
+        })
+      }
 
     } catch (error) {
-      console.error('Erreur:', error)
-      
+      console.error('Erreur chatbot:', error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'Désolé, une erreur est survenue. Pouvez-vous réessayer ?',
+        text: "Désolé, une erreur s'est produite. Veuillez réessayer.",
         sender: 'bot',
         timestamp: new Date(),
       }
-      
-      setMessages(prev => [...prev, errorMessage])
+      setMessages([...newMessages, errorMessage])
     } finally {
       setIsLoading(false)
     }
@@ -135,100 +133,104 @@ export default function Chatbot({ onClose }: ChatbotProps) {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-500 p-4 rounded-t-2xl flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-            <Bot className="w-6 h-6 text-purple-600" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg shadow-2xl w-full max-w-lg flex flex-col h-[600px]">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 text-white">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+              <Bot className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">ÉcoBot</h3>
+              <p className="text-sm text-white/80">Assistant ÉnergieClaire</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-white font-semibold">ÉcoBot</h3>
-            <p className="text-purple-100 text-xs">Assistant ÉnergieClaire</p>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-white hover:bg-white/20 rounded-full p-1.5 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex gap-2 ${
-              message.sender === 'user' ? 'justify-end' : 'justify-start'
-            }`}
+          <button
+            onClick={onClose}
+            className="hover:bg-white/20 p-2 rounded-lg transition-colors"
+            aria-label="Fermer le chat"
           >
-            {message.sender === 'bot' && (
-              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="w-5 h-5 text-purple-600" />
-              </div>
-            )}
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+          {messages.map((message) => (
             <div
-              className={`max-w-[75%] rounded-2xl px-4 py-2 ${
-                message.sender === 'user'
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-800'
+              key={message.id}
+              className={`flex gap-3 ${
+                message.sender === 'user' ? 'justify-end' : 'justify-start'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-              <p className="text-xs mt-1 opacity-70">
-                {message.timestamp.toLocaleTimeString('fr-FR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-            {message.sender === 'user' && (
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="w-5 h-5 text-blue-600" />
+              {message.sender === 'bot' && (
+                <div className="bg-blue-100 p-2 rounded-full h-fit">
+                  <Bot className="w-5 h-5 text-blue-600" />
+                </div>
+              )}
+              <div
+                className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                  message.sender === 'user'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-900'
+                }`}
+              >
+                <p className="whitespace-pre-wrap">{message.text}</p>
+                <span className="text-xs opacity-70 mt-1 block">
+                  {message.timestamp.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
               </div>
-            )}
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex gap-2 justify-start">
-            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-              <Bot className="w-5 h-5 text-purple-600" />
+              {message.sender === 'user' && (
+                <div className="bg-blue-600 p-2 rounded-full h-fit">
+                  <User className="w-5 h-5 text-white" />
+                </div>
+              )}
             </div>
-            <div className="bg-gray-100 rounded-2xl px-4 py-2">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+          ))}
+          {isLoading && (
+            <div className="flex gap-3 justify-start">
+              <div className="bg-blue-100 p-2 rounded-full h-fit">
+                <Bot className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="bg-gray-100 rounded-2xl px-4 py-2">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Tapez votre message..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            disabled={isLoading}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={isLoading || !inputValue.trim()}
-            className="bg-gradient-to-r from-purple-600 to-blue-500 text-white p-2 rounded-full hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="w-5 h-5" />
-          </button>
+        {/* Input */}
+        <div className="p-4 bg-white border-t">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Tapez votre message..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={isLoading || !inputValue.trim()}
+              className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Envoyer le message"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
   )
-      }
+}
