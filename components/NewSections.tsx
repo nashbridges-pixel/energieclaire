@@ -1,4 +1,4 @@
-export function HeroSection() {
+export function HeroSection({ onOpenChatbot }: { onOpenChatbot: () => void }) {
   return (
     <section className="bg-blue-50 py-20">
       <div className="max-w-7xl mx-auto px-4">
@@ -18,7 +18,10 @@ export function HeroSection() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
-              <button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all">
+              <button 
+                onClick={onOpenChatbot}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all"
+              >
                 Comparer maintenant
               </button>
               <button className="bg-white text-gray-700 px-8 py-4 rounded-full font-semibold text-lg border-2 border-gray-200 hover:border-blue-400 transition-all">
