@@ -37,8 +37,8 @@ export default function Home() {
 
       {/* Hero Section - NOUVEAU */}
       <div className="pt-16">
-        <HeroSection />
-      </div>
+  <HeroSection onOpenChatbot={() => setShowChatbot(true)} />
+</div>
 
       {/* Stats */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-y border-gray-100">
