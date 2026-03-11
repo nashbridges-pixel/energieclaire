@@ -12,6 +12,7 @@ type TarifOption = 'Base' | 'HP/HC' | ''
 
 interface FormData {
   prenom: string
+  nom: string
   email: string
   telephone: string
   code_postal: string
@@ -28,6 +29,7 @@ const WEBHOOK_URL = 'https://n8n-buih.sliplane.app/webhook/lead-capture'
 export default function FactureForm({ onClose }: FactureFormProps) {
   const [form, setForm] = useState<FormData>({
     prenom: '',
+    nom: '',
     email: '',
     telephone: '',
     code_postal: '',
@@ -49,7 +51,7 @@ export default function FactureForm({ onClose }: FactureFormProps) {
 
   const validate = () => {
     const required: (keyof FormData)[] = [
-      'prenom', 'email', 'type_energie',
+      'prenom', 'nom', 'email', 'type_energie',
       'fournisseur_actuel', 'prix_kwh_ttc', 'abonnement_mensuel_ht',
     ]
     const newErrors: Partial<Record<keyof FormData, boolean>> = {}
@@ -70,6 +72,7 @@ export default function FactureForm({ onClose }: FactureFormProps) {
         body: JSON.stringify({
           source: 'formulaire_facture',
           prenom: form.prenom,
+          nom: form.nom,
           email: form.email,
           telephone: form.telephone,
           code_postal: form.code_postal,
@@ -82,7 +85,7 @@ export default function FactureForm({ onClose }: FactureFormProps) {
         }),
       })
     } catch (_) {
-      // Fail silently — succès affiché quoi qu'il arrive
+      // Fail silently
     }
     setLoading(false)
     setSuccess(true)
@@ -113,7 +116,6 @@ export default function FactureForm({ onClose }: FactureFormProps) {
     >
       <div className="bg-white rounded-2xl w-full max-w-[960px] max-h-[92vh] overflow-y-auto shadow-2xl relative">
 
-        {/* Close */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
@@ -129,7 +131,7 @@ export default function FactureForm({ onClose }: FactureFormProps) {
             </div>
             <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Analyse en cours !</h2>
             <p className="text-gray-500 text-base leading-relaxed max-w-sm mb-6">
-              Merci <strong className="text-gray-800">{form.prenom}</strong> ! Nous comparons votre contrat avec les meilleures offres du marché.<br /><br />
+              Merci <strong className="text-gray-800">{form.prenom} {form.nom}</strong> ! Nous comparons votre contrat avec les meilleures offres du marché.<br /><br />
               Vous recevrez vos économies potentielles <strong>sous 24h</strong>.
             </p>
             <div className="bg-green-50 border border-green-200 rounded-xl px-6 py-3 text-green-700 text-sm font-medium">
@@ -162,36 +164,45 @@ export default function FactureForm({ onClose }: FactureFormProps) {
                   </div>
                 </div>
 
+                {/* Prénom + Nom */}
                 <div className="grid grid-cols-2 gap-2.5 mb-3">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Prénom *</label>
                     <input type="text" placeholder="Jean" value={form.prenom} onChange={e => set('prenom', e.target.value)} className={inputClass('prenom')} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Téléphone</label>
-                    <input type="tel" placeholder="06 12 34 56 78" value={form.telephone} onChange={e => set('telephone', e.target.value)} className={inputClass('telephone')} />
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nom *</label>
+                    <input type="text" placeholder="Dupont" value={form.nom} onChange={e => set('nom', e.target.value)} className={inputClass('nom')} />
                   </div>
                 </div>
 
+                {/* Email */}
                 <div className="mb-3">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email professionnel *</label>
                   <input type="email" placeholder="contact@monrestaurant.fr" value={form.email} onChange={e => set('email', e.target.value)} className={inputClass('email')} />
                 </div>
 
+                {/* Téléphone + Code postal */}
                 <div className="grid grid-cols-2 gap-2.5 mb-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Téléphone</label>
+                    <input type="tel" placeholder="06 12 34 56 78" value={form.telephone} onChange={e => set('telephone', e.target.value)} className={inputClass('telephone')} />
+                  </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5">Code postal</label>
                     <input type="text" placeholder="69001" maxLength={5} value={form.code_postal} onChange={e => set('code_postal', e.target.value)} className={inputClass('code_postal')} />
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Type d&apos;énergie *</label>
-                    <select value={form.type_energie} onChange={e => set('type_energie', e.target.value as EnergyType)} className={inputClass('type_energie')}>
-                      <option value="">Sélectionner</option>
-                      <option>Électricité</option>
-                      <option>Gaz</option>
-                      <option>Électricité et Gaz</option>
-                    </select>
-                  </div>
+                </div>
+
+                {/* Type énergie */}
+                <div className="mb-3">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Type d&apos;énergie *</label>
+                  <select value={form.type_energie} onChange={e => set('type_energie', e.target.value as EnergyType)} className={inputClass('type_energie')}>
+                    <option value="">Sélectionner</option>
+                    <option>Électricité</option>
+                    <option>Gaz</option>
+                    <option>Électricité et Gaz</option>
+                  </select>
                 </div>
 
                 <hr className="border-gray-100 my-4" />
